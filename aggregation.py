@@ -56,27 +56,35 @@ def aggregate(
     first_pos = int(real_positions[0].item())
     last_pos = int(real_positions[-1].item())
 
+    last_layer = hidden_states[-1]
+
+    residuals = []
+    for l in range(L):
+      residual_l = hidden_states[l] - last_layer
+      residual_l = residual_l / (residual_l.norm(dim=-1, keepdim=True) + 1e-6)
+      residuals.append(residual_l)
+
+    residuals = torch.stack(residuals)
     # Pool over layers
-    early = hidden_states[:s1]
-    early_pooled = early.mean(dim=0)
-    early_mean = early_pooled[first_pos:last_pos+1].mean(dim=0)
-    early_var = early_pooled[first_pos:last_pos+1].var(dim=0)
+    early = residuals[:s1]
+    early_pooled = early.mean(dim=1)
+    early_feat = early_pooled.reshape(-1)
 
     # Pool over intermediate layers
-    inter = hidden_states[s1:s2]
+    inter = residuals[s1:s2]
     inter_pooled = inter.mean(dim=0)
-    inter_mean = inter_pooled[first_pos:last_pos+1].mean(dim=0)
-    inter_var = inter_pooled[first_pos:last_pos+1].var(dim=0)
+    inter_pooled = inter.mean(dim=1)
+    inter_feat = inter_pooled.reshape(-1)
     
     # Pool over last layers
-    late = hidden_states[s2:]
+    late = residuals[s2:]
     late_pooled = late.mean(dim=0)
-    late_mean = late_pooled[first_pos:last_pos+1].mean(dim=0)
-    late_var = late_pooled[first_pos:last_pos+1].var(dim=0)
+    late_pooled = late.mean(dim=1)
+    late_feat = late_pooled.reshape(-1)
 
-    feature = torch.cat([early_mean, early_var,
-                          inter_mean, inter_var,
-                            late_mean, late_var])
+    feature = torch.cat([early_feat,
+                        inter_feat,
+                        late_feat])
 
 
     return feature
@@ -133,8 +141,6 @@ def extract_geometric_features(
         mean_cos.append(cos.mean())
         var_cos.append(cos.var())
     
-        cos_mean_feats = torch.stack(mean_cos)
-        cos_var_feats = torch.stack(var_cos)
       norms = torch.norm(hidden_states[l], dim = -1)
       norm_mean.append(norms.mean())
       norm_var.append(norms.var())
