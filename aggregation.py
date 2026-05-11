@@ -18,7 +18,7 @@ single entry point called from the notebook.
 from __future__ import annotations
 
 import torch
-
+import torch.nn.functional as F
 
 def aggregate(
     hidden_states: torch.Tensor,
@@ -85,7 +85,20 @@ def extract_geometric_features(
     # STUDENT: Replace or extend the geometric feature extraction below.
     # ------------------------------------------------------------------
 
-    # Placeholder: returns an empty tensor (no geometric features).
+    # tensor shape = L,T,D
+    L, T, D = hidden_states.shape
+
+    # cosine similarity vs the last layer
+    last_layer = hidden_states[-1]
+    last_layer = last_layer.view(1, -1)
+
+    inter_layers = hidden_states[1:-1]
+    inter_layers = inter_layers.view(L, -1)    
+    cosine_similarities = F.cosine_similarity(inter_layers, last_layer, dim=1)
+
+    # Later we will return the mean, max and std of the cosine similarities
+    
+
     return torch.zeros(0)
 
 
