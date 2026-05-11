@@ -43,9 +43,13 @@ class HallucinationProbe(nn.Module):
             input_dim: Feature vector dimensionality.
         """
         self._net = nn.Sequential(
-            nn.Linear(input_dim, 256),
-            nn.ReLU(),
-            nn.Linear(256, 1),
+            nn.LayerNorm(input_dim),
+            nn.Linear(input_dim, 512),
+            nn.GELU(),
+            nn.Dropout(0.1),
+            nn.Linear(512, 128),
+            nn.GELU(),
+            nn.Linear(128, 1),
         )
 
     # ------------------------------------------------------------------
@@ -95,7 +99,7 @@ class HallucinationProbe(nn.Module):
         # ------------------------------------------------------------------
         # STUDENT: Replace or extend the training loop below.
         # ------------------------------------------------------------------
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+        optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4, weight_decay=1e-2)
 
         self.train()
         for _ in range(200):

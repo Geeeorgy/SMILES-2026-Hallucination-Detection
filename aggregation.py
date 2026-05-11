@@ -45,14 +45,39 @@ def aggregate(
     # STUDENT: Replace or extend the aggregation below.
     # ------------------------------------------------------------------
 
-    # Default: last real token of the final transformer layer.
-    layer = hidden_states[-1]          # (seq_len, hidden_dim)
+    
 
-    # Find the index of the last real (non-padding) token.
-    real_positions = attention_mask.nonzero(as_tuple=False)  # (n_real, 1)
-    last_pos = int(real_positions[-1].item())                 # scalar index
+    L, T, D = hidden_states.shape
+    real_positions = attention_mask.nonzero(as_tuple=False)
+    # Split layers into early, intermediate and late
+    s1 = L // 3
+    s2 = 2 * L // 3
 
-    feature = layer[last_pos]          # (hidden_dim,)
+    first_pos = int(real_positions[0].item())
+    last_pos = int(real_positions[-1].item())
+
+    # Pool over layers
+    early = hidden_states[:s1]
+    early_pooled = early.mean(dim=0)
+    early_mean = early_pooled[first_pos:last_pos+1].mean(dim=0)
+    early_var = early_pooled[first_pos:last_pos+1].var(dim=0)
+
+    # Pool over intermediate layers
+    inter = hidden_states[s1:s2]
+    inter_pooled = inter.mean(dim=0)
+    inter_mean = inter_pooled[first_pos:last_pos+1].mean(dim=0)
+    inter_var = inter_pooled[first_pos:last_pos+1].var(dim=0)
+    
+    # Pool over last layers
+    late = hidden_states[s2:]
+    late_pooled = late.mean(dim=0)
+    late_mean = late_pooled[first_pos:last_pos+1].mean(dim=0)
+    late_var = late_pooled[first_pos:last_pos+1].var(dim=0)
+
+    feature = torch.cat([early_mean, early_var,
+                          inter_mean, inter_var,
+                            late_mean, late_var])
+
 
     return feature
     # ------------------------------------------------------------------
@@ -87,19 +112,40 @@ def extract_geometric_features(
 
     # tensor shape = L,T,D
     L, T, D = hidden_states.shape
+    real_positions = attention_mask.nonzero(as_tuple=False)
+
+    first_pos = int(real_positions[0].item())
+    last_pos = int(real_positions[-1].item())
+
+    hidden_states = hidden_states[:, first_pos:last_pos+1]
 
     # cosine similarity vs the last layer
     last_layer = hidden_states[-1]
-    last_layer = last_layer.view(1, -1)
+    mean_cos = []
+    var_cos = []
 
-    inter_layers = hidden_states[1:-1]
-    inter_layers = inter_layers.view(L, -1)    
-    cosine_similarities = F.cosine_similarity(inter_layers, last_layer, dim=1)
-
-    # Later we will return the mean, max and std of the cosine similarities
+    # Layer norm mean and var
+    norm_mean = []
+    norm_var = []
+    for l in range(L):
+      if l != 1:
+        cos = F.cosine_similarity(hidden_states[l], last_layer, dim=-1)
+        mean_cos.append(cos.mean())
+        var_cos.append(cos.var())
     
+        cos_mean_feats = torch.stack(mean_cos)
+        cos_var_feats = torch.stack(var_cos)
+      norms = torch.norm(hidden_states[l], dim = -1)
+      norm_mean.append(norms.mean())
+      norm_var.append(norms.var())
+    
+    geometric_feats = torch.cat([torch.stack(mean_cos),
+                                torch.stack(var_cos),
+                                torch.stack(norm_mean),
+                                torch.stack(norm_var)])
 
-    return torch.zeros(0)
+
+    return geometric_feats
 
 
 def aggregation_and_feature_extraction(
