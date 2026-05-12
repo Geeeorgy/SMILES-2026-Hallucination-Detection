@@ -109,9 +109,9 @@ def extract_geometric_features(
     trajectory = []
     for l in range(L):
       if l != 0:
-        cos = F.cosine_similarity(hidden_states[l], last_layer, dim=-1)
+        cos = F.cosine_similarity(hidden_states[l][-1], last_layer[-1], dim=-1)
         mean_cos.append(cos.mean())
-        var_cos.append(cos.var())
+
         
         delta = hidden_states[l] - hidden_states[l-1]
         delta_norm = delta.norm(dim=-1)
@@ -119,7 +119,6 @@ def extract_geometric_features(
         trajectory.append(torch.stack([delta_norm.mean(), delta_norm.std(), delta.mean()]))
     
     geometric_feats = torch.cat([torch.stack(mean_cos),
-                                torch.stack(var_cos),
                                 torch.stack(trajectory).flatten()])
 
 
