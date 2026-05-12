@@ -44,11 +44,9 @@ class HallucinationProbe(nn.Module):
         """
         self._net = nn.Sequential(
             nn.LayerNorm(input_dim),
-            nn.Linear(input_dim, 512),
-            nn.GELU(),
-            nn.Dropout(0.1),
-            nn.Linear(512, 128),
-            nn.GELU(),
+            nn.Linear(input_dim, 128),
+            nn.ReLU(),
+            nn.Dropout(0.25),
             nn.Linear(128, 1),
         )
 
@@ -99,7 +97,7 @@ class HallucinationProbe(nn.Module):
         # ------------------------------------------------------------------
         # STUDENT: Replace or extend the training loop below.
         # ------------------------------------------------------------------
-        optimizer = torch.optim.AdamW(self.parameters(), lr=5e-4, weight_decay=1e-2)
+        optimizer = torch.optim.Adam(self.parameters(), lr=5e-4)
 
         self.train()
         for _ in range(200):

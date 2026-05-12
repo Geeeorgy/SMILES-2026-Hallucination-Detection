@@ -56,36 +56,8 @@ def aggregate(
     first_pos = int(real_positions[0].item())
     last_pos = int(real_positions[-1].item())
 
-    last_layer = hidden_states[-1]
-
-    residuals = []
-    for l in range(L):
-      residual_l = hidden_states[l] - last_layer
-      residual_l = residual_l / (residual_l.norm(dim=-1, keepdim=True) + 1e-6)
-      residuals.append(residual_l)
-
-    residuals = torch.stack(residuals)
-    # Pool over layers
-    early = residuals[:s1]
-    early_pooled = early.mean(dim=1)
-    early_feat = early_pooled.reshape(-1)
-
-    # Pool over intermediate layers
-    inter = residuals[s1:s2]
-    inter_pooled = inter.mean(dim=0)
-    inter_pooled = inter.mean(dim=1)
-    inter_feat = inter_pooled.reshape(-1)
-    
-    # Pool over last layers
-    late = residuals[s2:]
-    late_pooled = late.mean(dim=0)
-    late_pooled = late.mean(dim=1)
-    late_feat = late_pooled.reshape(-1)
-
-    feature = torch.cat([early_feat,
-                        inter_feat,
-                        late_feat])
-
+    last_layers = hidden_states[-9:-1]
+    feature = torch.cat([last_layers[:,last_pos].mean(dim=0), hidden_states[-1,last_pos]])
 
     return feature
     # ------------------------------------------------------------------
@@ -135,11 +107,19 @@ def extract_geometric_features(
     # Layer norm mean and var
     norm_mean = []
     norm_var = []
+
+    # Trajectory
+    trajectory = []
     for l in range(L):
-      if l != 1:
+      if l != 0:
         cos = F.cosine_similarity(hidden_states[l], last_layer, dim=-1)
         mean_cos.append(cos.mean())
         var_cos.append(cos.var())
+        
+        delta = hidden_states[l] - hidden_states[l-1]
+        delta_norm = delta.norm(dim=-1)
+
+        trajectory.append(torch.stack([delta_norm.mean(), delta_norm.std(), delta.mean()]))
     
       norms = torch.norm(hidden_states[l], dim = -1)
       norm_mean.append(norms.mean())
@@ -147,8 +127,7 @@ def extract_geometric_features(
     
     geometric_feats = torch.cat([torch.stack(mean_cos),
                                 torch.stack(var_cos),
-                                torch.stack(norm_mean),
-                                torch.stack(norm_var)])
+                                torch.stack(trajectory).flatten()])
 
 
     return geometric_feats
