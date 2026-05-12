@@ -57,11 +57,12 @@ def split_data(
         idx,
         test_size=0.15,
         random_state=random_state,
+        shuffle = True,
         stratify=y,
     )
 
     skf = StratifiedKFold(
-        n_splits=3,
+        n_splits=5,
         shuffle=True,
         random_state=random_state,
     )

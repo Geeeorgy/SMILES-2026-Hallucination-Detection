@@ -49,9 +49,6 @@ def aggregate(
 
     L, T, D = hidden_states.shape
     real_positions = attention_mask.nonzero(as_tuple=False)
-    # Split layers into early, intermediate and late
-    s1 = L // 3
-    s2 = 2 * L // 3
 
     first_pos = int(real_positions[0].item())
     last_pos = int(real_positions[-1].item())
@@ -120,10 +117,6 @@ def extract_geometric_features(
         delta_norm = delta.norm(dim=-1)
 
         trajectory.append(torch.stack([delta_norm.mean(), delta_norm.std(), delta.mean()]))
-    
-      norms = torch.norm(hidden_states[l], dim = -1)
-      norm_mean.append(norms.mean())
-      norm_var.append(norms.var())
     
     geometric_feats = torch.cat([torch.stack(mean_cos),
                                 torch.stack(var_cos),
