@@ -45,10 +45,10 @@ Several related approaches inspired the feature engineering choices explored in 
 Additional related works include:
 
 **LLM Internal States Reveal Hallucination Risk Faced With a Query**  
-https://arxiv.org/abs/2407.03282 :contentReference[oaicite:1]{index=1}
+https://arxiv.org/abs/2407.03282
 
 **Do LLMs "know" internally when they follow instructions?**  
-https://arxiv.org/abs/2410.14516 :contentReference[oaicite:2]{index=2}
+https://arxiv.org/abs/2410.14516
 
 These works collectively suggest that hallucination signals emerge not only in final-layer embeddings, but also in the *geometry*, *consistency*, and *evolution* of hidden representations across layers.
 
